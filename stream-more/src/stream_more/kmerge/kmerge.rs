@@ -52,11 +52,13 @@ where
     F: Fn(&D, &D) -> bool,
     FnCmp<F>: Compare<D>,
 {
-    /// Create an empty `KMerge` streams that choose item to output by a function
-    /// `is_first(a,b)`.
+    /// Return an empty `Stream` adaptor `KMerge` that flattens `Stream`s by merging them according
+    /// to the given closure `first()`.
     ///
-    /// If `is_first(a,b)` returns `true`, `a` will be chosen first over `b`, where `a` and `b` are
-    /// next item from different streams.
+    /// The closure `first()` is called with two elements `a`, `b` and should return `true` if `a`
+    /// is ordered before `b`.
+    ///
+    /// If all base `Stream`s are sorted according to `first()`, the result is sorted.
     ///
     /// # Example
     ///
@@ -72,8 +74,8 @@ where
     /// let got = block_on(m.collect::<Vec<u64>>());
     /// assert_eq!(vec![1, 2, 3, 4], got);
     /// ```
-    pub fn by(choose_first: F) -> Self {
-        Self::by_cmp(FnCmp(choose_first))
+    pub fn by(first: F) -> Self {
+        Self::by_cmp(FnCmp(first))
     }
 }
 

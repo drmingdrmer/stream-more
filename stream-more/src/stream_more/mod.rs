@@ -12,10 +12,13 @@ pub mod peeked;
 
 /// Provide more methods for [`Stream`].
 pub trait StreamMore: Stream {
-    /// Create a k-way merge stream, which chooses the item from the streams by `is_first(a,b)`.
+    /// Create a k-way merge `Stream` that flattens `Stream`s by merging them according
+    /// to the given closure `first()`.
     ///
-    /// If `is_first(a,b)` returns `true`, `a` will be chosen first over `b`, where `a` and `b` are
-    /// next item from different streams.
+    /// The closure `first()` is called with two elements `a`, `b` and should return `true` if `a`
+    /// is ordered before `b`.
+    ///
+    /// If all base `Stream`s are sorted according to `first()`, the result is sorted.
     ///
     /// # Example
     ///
@@ -30,12 +33,12 @@ pub trait StreamMore: Stream {
     /// let got = block_on(m.collect::<Vec<u64>>());
     /// assert_eq!(vec![1, 2, 3, 4], got);
     /// ```
-    fn kmerge_by<'a, F>(self, is_first: F) -> KMerge<'a, FnCmp<F>, Self::Item>
+    fn kmerge_by<'a, F>(self, first: F) -> KMerge<'a, FnCmp<F>, Self::Item>
     where
         Self: Sized + Send + 'a,
         F: Fn(&Self::Item, &Self::Item) -> bool,
     {
-        KMerge::by(is_first).merge(self)
+        KMerge::by(first).merge(self)
     }
 
     /// Create a k-way merge stream, which chooses the item from the streams by a comparator
