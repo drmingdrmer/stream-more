@@ -146,9 +146,8 @@ where
                 return Poll::Ready(None);
             };
 
-            let curr = peek_mut.peeked.take();
-            if curr.has_peeked() {
-                return Poll::Ready(Option::from(curr));
+            if peek_mut.peeked.has_peeked() {
+                return Poll::Ready(peek_mut.peeked.take());
             }
 
             let next = ready!(peek_mut.stream.as_mut().poll_next(cx));

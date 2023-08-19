@@ -19,15 +19,9 @@ impl<D> Peeked<D> {
     }
 
     /// Take the peeked value, and reset it to [`Peeked::No`] state.
-    pub fn take(&mut self) -> Self {
-        std::mem::replace(self, Peeked::No)
-    }
-}
-
-impl<D> From<Peeked<D>> for Option<D> {
-    fn from(value: Peeked<D>) -> Self {
-        match value {
-            Peeked::Yes(value) => Some(value),
+    pub fn take(&mut self) -> Option<D> {
+        match std::mem::replace(self, Peeked::No) {
+            Peeked::Yes(v) => Some(v),
             Peeked::No => None,
         }
     }
