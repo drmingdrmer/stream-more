@@ -14,9 +14,10 @@ license       = { workspace = true }
 repository    = { workspace = true }
 
 [dependencies]
-binary-heap-plus= { workspace = true }
-compare         = { workspace = true }
-futures         = { workspace = true }
+binary-heap-plus = { workspace = true }
+compare          = { workspace = true }
+futures          = { workspace = true }
+pin-project-lite = { workspace = true }
 
 [dev-dependencies]
 anyhow             = { workspace = true }

@@ -4,8 +4,10 @@ use comparators::FnCmp;
 use compare::Compare;
 use futures::Stream;
 
+use crate::stream_more::coalesce::Coalesce;
 use crate::stream_more::kmerge::KMerge;
 
+pub mod coalesce;
 pub mod comparators;
 pub mod kmerge;
 pub mod peeked;
@@ -115,6 +117,46 @@ pub trait StreamMore: Stream {
         Self::Item: Ord,
     {
         KMerge::min().merge(self)
+    }
+
+    /// Return a stream adaptor that uses the passed-in closure to optionally merge together
+    /// consecutive items.
+    ///
+    /// The closure `f` is passed two items `previous` and `current` and may return either:
+    /// - (1) `Ok(combined)` to merge the two values or
+    /// - (2) `Err((previous, current))` to indicate they can’t be merged.
+    ///
+    /// In (2), the value `previous` is emitted.
+    /// Either (1) `combined` or (2) `current` becomes the previous value when coalesce continues
+    /// with the next pair of items to merge. The value that remains at the end is also
+    /// emitted.
+    ///
+    /// The stream item type is `Self::Item`.
+    ///
+    /// ```
+    /// use futures::stream::iter;
+    /// # use futures::StreamExt;
+    /// # use crate::stream_more::StreamMore;
+    /// # futures::executor::block_on(async {
+    ///
+    /// // sum same-sign runs together
+    /// let got = iter(vec![-1, -2, -3, 3, 1, 0, -1])
+    ///             .coalesce(|x, y|
+    ///                 if x * y >= 0 {
+    ///                     Ok(x + y)
+    ///                 } else {
+    ///                     Err((x, y))
+    ///                 })
+    ///             .collect::<Vec<_>>().await;
+    /// assert_eq!(vec![-6, 4, -1], got);
+    /// # });
+    /// ```
+    fn coalesce<'a, F>(self, f: F) -> Coalesce<'a, Self::Item, F>
+    where
+        Self: Sized + Send + 'a,
+        F: FnMut(Self::Item, Self::Item) -> Result<Self::Item, (Self::Item, Self::Item)>,
+    {
+        Coalesce::new(Box::pin(self), f)
     }
 }
 

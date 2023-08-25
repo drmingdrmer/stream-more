@@ -19,6 +19,7 @@ binary-heap-plus = { version = "0.5.0" }
 compare = { version = "0.1.0" }
 futures = "0.3"
 pretty_assertions = "1.0.0"
+pin-project-lite = { version = "0.2.12" }
 
 
 
