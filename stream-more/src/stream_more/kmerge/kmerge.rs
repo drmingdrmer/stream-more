@@ -8,6 +8,8 @@ use compare::Compare;
 use futures::ready;
 use futures::Stream;
 
+use crate::comparators::Ascending;
+use crate::comparators::Descending;
 use crate::stream_more::comparators::FnCmp;
 use crate::stream_more::kmerge::heap_entry::HeapEntry;
 use crate::stream_more::kmerge::heap_entry::HeapEntryCmp;
@@ -28,17 +30,16 @@ use crate::stream_more::peeked::Peeked;
 /// Example:
 /// ```
 /// use futures::stream::iter;
-/// use futures::executor::block_on;
 /// use stream_more::comparators::Ascending;
 /// # use futures::StreamExt;
 /// # use stream_more::KMerge;
-///
-/// let m = KMerge::by_cmp(Ascending)
-///                .merge(iter([1,3]))
-///                .merge(iter([2,4]));
-///
-/// let got = block_on(m.collect::<Vec<u64>>());
+/// # futures::executor::block_on(async {
+/// let got = KMerge::by(|a,b| a < b)
+///             .merge(iter([1,3]))
+///             .merge(iter([2,4]))
+///             .collect::<Vec<u64>>().await;
 /// assert_eq!(vec![1, 2, 3, 4], got);
+/// # });
 /// ```
 pub struct KMerge<'a, C, D>
 where C: Compare<D>
@@ -64,15 +65,15 @@ where
     ///
     /// ```rust
     /// use futures::stream::iter;
-    /// use futures::executor::block_on;
     /// # use futures::StreamExt;
     /// # use crate::stream_more::KMerge;
-    ///
-    /// let m = KMerge::by(|a,b| a < b)
+    /// # futures::executor::block_on(async {
+    /// let got = KMerge::by(|a,b| a < b)
     ///             .merge(iter([1,3]))
-    ///             .merge(iter([2,4]));
-    /// let got = block_on(m.collect::<Vec<u64>>());
+    ///             .merge(iter([2,4]))
+    ///             .collect::<Vec<u64>>().await;
     /// assert_eq!(vec![1, 2, 3, 4], got);
+    /// # });
     /// ```
     pub fn by(first: F) -> Self {
         Self::by_cmp(FnCmp(first))
@@ -90,15 +91,15 @@ where C: Compare<D>
     /// Sort merge two streams in ascending order:
     /// ```
     /// use futures::stream::iter;
-    /// use futures::executor::block_on;
     /// use stream_more::comparators::Ascending;
     /// # use crate::stream_more::KMerge;
     /// # use futures::StreamExt;
     /// # use crate::stream_more::StreamMore;
-    ///
+    /// # futures::executor::block_on(async {
     /// let m = KMerge::by_cmp(Ascending).merge(iter([1,3])).merge(iter([2,4]));
-    /// let got = block_on(m.collect::<Vec<u64>>());
+    /// let got = m.collect::<Vec<u64>>().await;
     /// assert_eq!(vec![1, 2, 3, 4], got);
+    /// # });
     /// ```
     pub fn by_cmp(cmp: C) -> Self {
         KMerge {
@@ -114,6 +115,58 @@ where C: Compare<D>
         self.curr_id += 1;
         self.heap.push(HeapEntry::new(Box::pin(stream)).with_id(self.curr_id));
         self
+    }
+}
+
+impl<'a, D> KMerge<'a, Descending, D>
+where Descending: Compare<D>
+{
+    /// Merge streams by choosing the maximum item from the streams, behaving like a max-heap.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use futures::stream::iter;
+    /// # use futures::StreamExt;
+    /// # use stream_more::KMerge;
+    /// # use crate::stream_more::StreamMore;
+    /// # futures::executor::block_on(async {
+    /// let got = KMerge::max()
+    ///             .merge(iter([3,1]))
+    ///             .merge(iter([4,2]))
+    ///             .merge(iter([5]))
+    ///             .collect::<Vec<u64>>().await;
+    /// assert_eq!(vec![5, 4, 3, 2, 1], got);
+    /// # });
+    /// ```
+    pub fn max() -> Self {
+        KMerge::by_cmp(Descending)
+    }
+}
+
+impl<'a, D> KMerge<'a, Ascending, D>
+where Ascending: Compare<D>
+{
+    /// Merge streams by choosing the minimal item from the streams, behaving like a min-heap.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use futures::stream::iter;
+    /// # use futures::StreamExt;
+    /// # use stream_more::KMerge;
+    /// # use crate::stream_more::StreamMore;
+    /// # futures::executor::block_on(async {
+    /// let got = KMerge::min()
+    ///             .merge(iter([1,3]))
+    ///             .merge(iter([2,4]))
+    ///             .merge(iter([5]))
+    ///             .collect::<Vec<u64>>().await;
+    /// assert_eq!(vec![1, 2, 3, 4, 5], got);
+    /// # });
+    /// ```
+    pub fn min() -> Self {
+        KMerge::by_cmp(Ascending)
     }
 }
 

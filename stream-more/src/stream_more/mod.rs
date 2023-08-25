@@ -71,38 +71,50 @@ pub trait StreamMore: Stream {
         KMerge::by_cmp(cmp).merge(self)
     }
 
-    /// Convert this stream to a [`KMerge`] streams which merge streams by choosing the smallest
-    /// item from the streams.
+    /// Convert this stream to a [`KMerge`] streams which merge streams by choosing the maximum
+    /// item from the streams, behaving like a max-heap.
     ///
     /// # Example
     ///
     /// ```
     /// use futures::stream::iter;
-    /// use futures::executor::block_on;
-    /// use stream_more::comparators::Descending;
     /// # use futures::StreamExt;
     /// # use crate::stream_more::StreamMore;
-    ///
+    /// # futures::executor::block_on(async {
     /// let m = iter([3,1]).kmerge_max().merge(iter([4,2])).merge(iter([5]));
-    /// let got = block_on(m.collect::<Vec<u64>>());
+    /// let got = m.collect::<Vec<u64>>().await;
     /// assert_eq!(vec![5, 4, 3, 2, 1], got);
+    /// # });
     /// ```
     fn kmerge_max<'a>(self) -> KMerge<'a, Descending, Self::Item>
     where
         Self: Sized + Send + 'a,
         Self::Item: Ord,
     {
-        KMerge::by_cmp(Descending).merge(self)
+        KMerge::max().merge(self)
     }
 
-    /// Convert this stream to a [`KMerge`] streams which merge streams by choosing the smallest
-    /// item from the streams.
+    /// Convert this stream to a [`KMerge`] streams which merge streams by choosing the minimum
+    /// item from the streams, behaving like a min-heap.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use futures::stream::iter;
+    /// # use futures::StreamExt;
+    /// # use crate::stream_more::StreamMore;
+    /// # futures::executor::block_on(async {
+    /// let m = iter([3,1]).kmerge_min().merge(iter([4,2]));
+    /// let got = m.collect::<Vec<u64>>().await;
+    /// assert_eq!(vec![3,1,4,2], got);
+    /// # });
+    /// ```
     fn kmerge_min<'a>(self) -> KMerge<'a, Ascending, Self::Item>
     where
         Self: Sized + Send + 'a,
         Self::Item: Ord,
     {
-        KMerge::by_cmp(Ascending).merge(self)
+        KMerge::min().merge(self)
     }
 }
 
